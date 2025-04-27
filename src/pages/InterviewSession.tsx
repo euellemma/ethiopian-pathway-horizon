@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
@@ -7,7 +6,7 @@ import { AudioRecorder, playAudio, speechToText, textToSpeech } from '../utils/s
 import Layout from '../components/Layout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Mic, MicOff, Repeat, X } from 'lucide-react';
+import { Mic, MicOff, Repeat, X, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 
 const InterviewSession: React.FC = () => {
@@ -15,10 +14,8 @@ const InterviewSession: React.FC = () => {
   const { toast } = useToast();
   const { userInfo, addInterviewSession, addPoints } = useStore();
   
-  // Audio recorder
   const audioRecorder = useRef<AudioRecorder>(new AudioRecorder());
   
-  // Interview state
   const [questions, setQuestions] = useState<string[]>([]);
   const [answers, setAnswers] = useState<string[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState<string>('');
@@ -26,19 +23,19 @@ const InterviewSession: React.FC = () => {
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [isInterviewEnded, setIsInterviewEnded] = useState<boolean>(false);
+  const [showAIText, setShowAIText] = useState<boolean>(true);
+  const [currentAudioUrl, setCurrentAudioUrl] = useState<string>('');
   
-  // Initialize interview
   useEffect(() => {
     const startInterview = async () => {
       setIsProcessing(true);
       
       try {
-        // Generate first question
         const response = await generateInterviewQuestion(userInfo);
         setCurrentQuestion(response.text);
         
-        // Convert to speech
         const audioUrl = await textToSpeech(response.text);
+        setCurrentAudioUrl(audioUrl);
         await playAudio(audioUrl);
         
       } catch (error) {
@@ -58,7 +55,6 @@ const InterviewSession: React.FC = () => {
     }
   }, [userInfo, toast]);
   
-  // Start recording
   const handleStartRecording = async () => {
     try {
       await audioRecorder.current.start();
@@ -73,7 +69,6 @@ const InterviewSession: React.FC = () => {
     }
   };
   
-  // Stop recording and process answer
   const handleStopRecording = async () => {
     if (!isRecording) return;
     
@@ -81,20 +76,15 @@ const InterviewSession: React.FC = () => {
     setIsProcessing(true);
     
     try {
-      // Get audio blob
       const audioBlob = await audioRecorder.current.stop();
       
-      // Convert to text
       const transcript = await speechToText(audioBlob);
       setCurrentAnswer(transcript);
       
-      // Update the interview state
       setQuestions((prev) => [...prev, currentQuestion]);
       setAnswers((prev) => [...prev, transcript]);
       
-      // Check if we should continue the interview
       if (questions.length < 7) {
-        // Generate next question
         const response = await generateInterviewQuestion(
           userInfo,
           [...questions, currentQuestion],
@@ -107,12 +97,11 @@ const InterviewSession: React.FC = () => {
         } else {
           setCurrentQuestion(response.text);
           
-          // Convert to speech
           const audioUrl = await textToSpeech(response.text);
+          setCurrentAudioUrl(audioUrl);
           await playAudio(audioUrl);
         }
       } else {
-        // End interview if we've reached the maximum number of questions
         setIsInterviewEnded(true);
         handleEndInterview([...questions, currentQuestion], [...answers, transcript]);
       }
@@ -128,36 +117,33 @@ const InterviewSession: React.FC = () => {
     setIsProcessing(false);
   };
   
-  // Repeat current question
   const handleRepeatQuestion = async () => {
-    setIsProcessing(true);
+    if (!currentAudioUrl) return;
     
     try {
-      const audioUrl = await textToSpeech(currentQuestion);
-      await playAudio(audioUrl);
+      await playAudio(currentAudioUrl);
     } catch (error) {
-      console.error("Failed to repeat question:", error);
+      console.error("Failed to replay audio:", error);
+      toast({
+        title: "Error",
+        description: "Failed to replay the question. Please try again.",
+        variant: "destructive",
+      });
     }
-    
-    setIsProcessing(false);
   };
   
-  // End interview and navigate to results
   const handleEndInterview = async (finalQuestions: string[], finalAnswers: string[]) => {
     setIsProcessing(true);
     
     try {
-      // Generate feedback for each answer
       const feedbackPromises = finalQuestions.map((question, index) => {
         return getInterviewFeedback(question, finalAnswers[index] || '', userInfo);
       });
       
       const feedbackResults = await Promise.all(feedbackPromises);
       
-      // Generate overall feedback
       const sessionFeedback = await getSessionFeedback(finalQuestions, finalAnswers, userInfo);
       
-      // Create interview session
       const session = {
         id: Date.now().toString(),
         title: sessionFeedback.title,
@@ -172,13 +158,10 @@ const InterviewSession: React.FC = () => {
         })),
       };
       
-      // Add points (rating × 10)
       addPoints(session.rating * 10);
       
-      // Save session
       addInterviewSession(session);
       
-      // Navigate to results
       navigate(`/interview/results/${session.id}`);
       
     } catch (error) {
@@ -192,7 +175,6 @@ const InterviewSession: React.FC = () => {
     }
   };
   
-  // Cancel interview
   const handleCancelInterview = () => {
     navigate('/interview');
   };
@@ -203,15 +185,28 @@ const InterviewSession: React.FC = () => {
         <Card className="p-6">
           <div className="flex justify-between mb-6">
             <h2 className="text-xl font-bold">Mock Visa Interview</h2>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={handleCancelInterview}
-              disabled={isProcessing}
-            >
-              <X className="h-4 w-4 mr-1" />
-              Cancel
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setShowAIText(!showAIText)}
+              >
+                {showAIText ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleCancelInterview}
+                disabled={isProcessing}
+              >
+                <X className="h-4 w-4 mr-1" />
+                Cancel
+              </Button>
+            </div>
           </div>
           
           <div className="bg-gray-100 rounded-xl p-6 mb-6 min-h-[200px] flex items-center justify-center">
@@ -222,15 +217,7 @@ const InterviewSession: React.FC = () => {
                   <p className="text-gray-700">Processing...</p>
                 </div>
               ) : (
-                <>
-                  <p className="text-lg mb-4">{currentQuestion}</p>
-                  {currentAnswer && (
-                    <div className="mt-4 p-4 bg-white rounded-md">
-                      <p className="text-sm text-gray-500 mb-1">Your answer:</p>
-                      <p className="text-gray-700">{currentAnswer}</p>
-                    </div>
-                  )}
-                </>
+                showAIText && <p className="text-lg mb-4">{currentQuestion}</p>
               )}
             </div>
           </div>
@@ -239,7 +226,7 @@ const InterviewSession: React.FC = () => {
             <Button
               variant="outline"
               onClick={handleRepeatQuestion}
-              disabled={isProcessing || isRecording || isInterviewEnded}
+              disabled={isProcessing || isRecording}
             >
               <Repeat className="h-4 w-4 mr-2" />
               Repeat
@@ -249,7 +236,7 @@ const InterviewSession: React.FC = () => {
               <Button
                 className="bg-horizon-red hover:bg-red-700"
                 onClick={handleStartRecording}
-                disabled={isProcessing || isInterviewEnded}
+                disabled={isProcessing}
               >
                 <Mic className="h-4 w-4 mr-2" />
                 Start Speaking
@@ -262,6 +249,15 @@ const InterviewSession: React.FC = () => {
               >
                 <MicOff className="h-4 w-4 mr-2" />
                 Stop Speaking
+              </Button>
+            )}
+            
+            {isInterviewEnded && (
+              <Button
+                onClick={() => handleEndInterview(questions, answers)}
+                disabled={isProcessing}
+              >
+                Finish Interview
               </Button>
             )}
           </div>
