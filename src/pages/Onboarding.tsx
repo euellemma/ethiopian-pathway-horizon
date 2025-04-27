@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
@@ -18,7 +17,7 @@ const Onboarding: React.FC = () => {
   
   const [formState, setFormState] = useState({
     name: '',
-    gender: '',
+    gender: '' as 'Male' | 'Female',
     highschool: '',
     intendedCollege: '',
     fieldOfStudy: '',
@@ -43,6 +42,16 @@ const Onboarding: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validate that gender is either 'Male' or 'Female'
+    if (formState.gender !== 'Male' && formState.gender !== 'Female') {
+      toast({
+        title: "Invalid Gender",
+        description: "Please select either Male or Female",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     
     try {
