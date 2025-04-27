@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useStore } from '../store/useStore';
 import Layout from '../components/Layout';
@@ -25,11 +24,15 @@ const Dashboard: React.FC = () => {
   const questionsTotal = questions.length || 1;
   const questionsPercentage = (questionsCompleted / questionsTotal) * 100;
   
-  // Calculate mock interviews done
-  const interviewsDone = interviewSessions.length;
+  // Calculate mock interviews - completed if at least one interview is done
+  const interviewPercentage = interviewSessions.length > 0 ? 100 : 0;
   
-  // Calculate overall progress
-  const overallPercentage = (timelinePercentage + questionsPercentage + (interviewsDone > 0 ? 100 : 0)) / 3;
+  // Calculate overall progress based on completion of items
+  const overallPercentage = (
+    timelinePercentage + 
+    questionsPercentage + 
+    interviewPercentage
+  ) / 3;
   
   return (
     <Layout title="Dashboard">
@@ -66,7 +69,7 @@ const Dashboard: React.FC = () => {
             title="AI Mock Interview"
             description="Simulate a real visa interview with our AI interviewer and get personalized feedback."
             to="/interview"
-            progress={interviewsDone > 0 ? 100 : 0}
+            progress={interviewPercentage}
             icon={<MessageSquare className="h-6 w-6" />}
           />
         </div>

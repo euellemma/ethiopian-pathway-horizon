@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Check, Loader2, Save } from 'lucide-react';
 import { getQuestionFeedback } from '../utils/llmUtils';
 import { playAudio } from '../utils/speechUtils';
+import ReactMarkdown from 'react-markdown';
 
 const Questions: React.FC = () => {
   const { questions, questionProgress, updateQuestionProgress, userInfo, researchDocs } = useStore();
@@ -17,10 +18,8 @@ const Questions: React.FC = () => {
   const [feedback, setFeedback] = useState('');
   const [loading, setLoading] = useState(false);
   
-  // Calculate progress
   const completedQuestions = Object.values(questionProgress).filter(p => p.completed).length;
   
-  // Separate common questions from the rest
   const commonQuestions = useMemo(() => {
     return questions.filter(q => q.isMostCommon);
   }, [questions]);
@@ -29,12 +28,10 @@ const Questions: React.FC = () => {
     return questions.filter(q => !q.isMostCommon);
   }, [questions]);
   
-  // Get current question
   const currentQuestion = useMemo(() => {
     return questions.find(q => q.id === selectedQuestionId);
   }, [questions, selectedQuestionId]);
   
-  // Load progress data when a question is selected
   useEffect(() => {
     if (selectedQuestionId) {
       const progress = questionProgress[selectedQuestionId];
@@ -49,7 +46,6 @@ const Questions: React.FC = () => {
   }, [selectedQuestionId, questionProgress]);
   
   const handleQuestionSelect = (id: string) => {
-    // Auto-save current answer if needed
     if (selectedQuestionId && answer.trim() && answer !== questionProgress[selectedQuestionId]?.answer) {
       updateQuestionProgress(selectedQuestionId, { answer });
     }
@@ -73,7 +69,6 @@ const Questions: React.FC = () => {
     setLoading(true);
     
     try {
-      // Get research doc content if needed
       let additionalContext = '';
       if (currentQuestion.researchInfo && researchDocs) {
         additionalContext = researchDocs[currentQuestion.researchInfo] || '';
@@ -109,7 +104,6 @@ const Questions: React.FC = () => {
     }
   };
   
-  // If no question is selected, show the question list
   if (!selectedQuestionId) {
     return (
       <Layout title="Questions Preparation">
@@ -122,7 +116,6 @@ const Questions: React.FC = () => {
             />
           </div>
           
-          {/* Common Questions */}
           <div className="mb-8">
             <h2 className="text-xl font-semibold mb-4">Top 5 Common Questions</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -155,7 +148,6 @@ const Questions: React.FC = () => {
             </div>
           </div>
           
-          {/* Other Questions */}
           <div>
             <h2 className="text-xl font-semibold mb-4">Other Important Questions</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -192,7 +184,6 @@ const Questions: React.FC = () => {
     );
   }
   
-  // Show question details
   return (
     <Layout>
       <div className="max-w-4xl mx-auto py-8 px-4">
@@ -216,19 +207,31 @@ const Questions: React.FC = () => {
             </TabsList>
             
             <TabsContent value="tutorial" className="mt-6">
-              <div className="prose">
-                {currentQuestion?.doc}
+              <div className="prose max-w-none">
+                <ReactMarkdown>{currentQuestion?.doc || ''}</ReactMarkdown>
               </div>
               
-              {/* Sample Good Answers */}
+              {currentQuestion?.researchInfo && researchDocs && researchDocs[currentQuestion.researchInfo] && (
+                <div className="mt-6 p-4 bg-slate-50 rounded-lg">
+                  <h3 className="text-lg font-semibold mb-3">Additional Research Information</h3>
+                  <div className="prose max-w-none">
+                    <ReactMarkdown>{researchDocs[currentQuestion.researchInfo]}</ReactMarkdown>
+                  </div>
+                </div>
+              )}
+              
               <div className="mt-8">
                 <h3 className="text-lg font-semibold mb-3">Sample Good Answers</h3>
                 <div className="space-y-4">
                   {currentQuestion?.sampleAnswers.good.map((sample, index) => (
                     <Card key={index} className="p-4 bg-green-50">
-                      <p className="mb-2">{sample.text}</p>
+                      <div className="prose max-w-none">
+                        <ReactMarkdown>{sample.text}</ReactMarkdown>
+                      </div>
                       <div className="flex items-center justify-between mt-3">
-                        <p className="text-sm text-green-700"><strong>Why it's good:</strong> {sample.why}</p>
+                        <p className="text-sm text-green-700">
+                          <strong>Why it's good:</strong> <ReactMarkdown>{sample.why}</ReactMarkdown>
+                        </p>
                         {sample.voiceUrl && (
                           <Button 
                             size="sm" 
@@ -244,15 +247,18 @@ const Questions: React.FC = () => {
                 </div>
               </div>
               
-              {/* Sample Bad Answers */}
               <div className="mt-8">
                 <h3 className="text-lg font-semibold mb-3">Sample Poor Answers</h3>
                 <div className="space-y-4">
                   {currentQuestion?.sampleAnswers.bad.map((sample, index) => (
                     <Card key={index} className="p-4 bg-red-50">
-                      <p className="mb-2">{sample.text}</p>
+                      <div className="prose max-w-none">
+                        <ReactMarkdown>{sample.text}</ReactMarkdown>
+                      </div>
                       <div className="flex items-center justify-between mt-3">
-                        <p className="text-sm text-red-700"><strong>Why it's poor:</strong> {sample.why}</p>
+                        <p className="text-sm text-red-700">
+                          <strong>Why it's poor:</strong> <ReactMarkdown>{sample.why}</ReactMarkdown>
+                        </p>
                         {sample.voiceUrl && (
                           <Button 
                             size="sm" 
@@ -268,7 +274,6 @@ const Questions: React.FC = () => {
                 </div>
               </div>
               
-              {/* Variations */}
               {currentQuestion?.variations && currentQuestion.variations.length > 0 && (
                 <div className="mt-8">
                   <h3 className="text-lg font-semibold mb-3">Question Variations</h3>
