@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
@@ -23,7 +24,7 @@ const Onboarding: React.FC = () => {
     fieldOfStudy: '',
     fundingSources: '',
     city: '',
-    levelOfStudy: '',
+    levelOfStudy: '' as 'Associate' | 'Bachelor' | 'Master' | 'PhD',
     gapYears: 0,
     intakeYear: '',
   });
